@@ -52,4 +52,17 @@ namespace simpleIntersectCheck {
 
         return overlap_x && overlap_y;
     }
+
+    template <typename scalar_t>
+    HOST_DEVICE inline bool checkSameQuad(const scalar_t *quad_0,
+                                        const scalar_t *quad_1) {
+
+        PRAGMA_UNROLL
+        for (int i = 0; i < 4; ++i) {
+            if (quad_0[i * 2] != quad_1[i * 2] || quad_0[i * 2 + 1] != quad_1[i * 2 + 1]) {
+                return false; // If any point is different, they are not the same
+            }
+        }
+        return true; // All points are the same
+    }
 }

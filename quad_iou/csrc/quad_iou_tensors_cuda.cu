@@ -87,6 +87,11 @@ __device__ inline scalar_t calculateIoU(
 
     const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
 
+    if (simpleIntersectCheck::checkSameQuad(quad_0, quad_1)) {
+        // if both quads are the same, then IoU is 1.0
+        return 1.0;
+    }
+
     scalar_t intersect_area = intersectionArea(quad_0, quad_1);
     return intersect_area / (unionArea(quad_0_idx, quad_1_idx, quad_0_size, polygonAreas, intersect_area) + epsilon);
 }
