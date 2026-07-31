@@ -4,3 +4,6 @@ quad_iou.egg-info/
 log/
 __pycache__/
 build/
+*.so
+*.dll
+*.lib

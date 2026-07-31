@@ -1,5 +1,5 @@
 #define MAX_ALL_POINTS 16
-#include <torch/extension.h>
+#include <torch/csrc/stable/library.h>
 #include "utils.h"
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
@@ -40,7 +40,7 @@ namespace polygonArea{
         // Initialize the previous valid vertex
         PRAGMA_UNROLL
         for (int i = 0; i < n; ++i) {
-            if (!isinf(polygon[i][0]) && !isinf(polygon[i][1])) {
+            if (!std::isinf(polygon[i][0]) && !std::isinf(polygon[i][1])) {
                 j = i;
                 break;
             }
@@ -49,13 +49,13 @@ namespace polygonArea{
         // Calculate the sum for the Gaussian formula
         PRAGMA_UNROLL
         for (int i = j + 1; i < n; ++i) {
-            if (isinf(polygon[i][0]) && isinf(polygon[i][1])) continue; // Skip invalid vertices
+            if (std::isinf(polygon[i][0]) && std::isinf(polygon[i][1])) continue; // Skip invalid vertices
             area += (polygon[j][0] * polygon[i][1] - polygon[i][0] * polygon[j][1]);
             j = i; // Update the index of the previous valid vertex
         }
 
         // Close the polygon loop if the last vertex is valid
-        if (!isinf(polygon[j][0]) && !isinf(polygon[j][1]) && (!isinf(polygon[0][0]) && !isinf(polygon[0][1]))) {
+        if (!std::isinf(polygon[j][0]) && !std::isinf(polygon[j][1]) && (!std::isinf(polygon[0][0]) && !std::isinf(polygon[0][1]))) {
             area += (polygon[j][0] * polygon[0][1] - polygon[0][0] * polygon[j][1]);
         }
 

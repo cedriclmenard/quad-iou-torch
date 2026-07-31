@@ -1,4 +1,4 @@
-#include <torch/extension.h>
+#include <torch/csrc/stable/library.h>
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
 #define HOST_DEVICE __host__ __device__

@@ -1,7 +1,8 @@
 #define MAX_ALL_POINTS 16
 #define EPSILON 1e-6
-#include <torch/extension.h>
+#include <torch/csrc/stable/library.h>
 #include "utils.h"
+# include <cmath>
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
 #define HOST_DEVICE __host__ __device__
@@ -36,7 +37,7 @@ HOST_DEVICE inline Point<scalar_t> findCentroid(scalar_t points[MAX_ALL_POINTS][
     int valid_point_counter = 0;
     PRAGMA_UNROLL
     for (int i = 0; i < MAX_ALL_POINTS; i++) {
-        if (!isinf(points[i][0]) && !isinf(points[i][1])){
+        if (!std::isinf(points[i][0]) && !std::isinf(points[i][1])){
             centroid.x += points[i][0];
             centroid.y += points[i][1];
             valid_point_counter++;
@@ -119,8 +120,8 @@ namespace sortPoints{
             swapped = false; // Set swapped to false at the beginning of the loop
             for (int i = 0; i < n - 1; i++) {
                 // Skip points where both x and y are inf
-                if (isinf(points[i][0]) && isinf(points[i][1])) continue;
-                if (isinf(points[i + 1][0]) && isinf(points[i + 1][1])) continue;
+                if (std::isinf(points[i][0]) && std::isinf(points[i][1])) continue;
+                if (std::isinf(points[i + 1][0]) && std::isinf(points[i + 1][1])) continue;
                 Point<scalar_t> p1 = {points[i][0], points[i][1]};
                 Point<scalar_t> p2 = {points[i + 1][0], points[i + 1][1]};
 

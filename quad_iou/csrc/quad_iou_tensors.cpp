@@ -13,12 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
+#include <Python.h>
 
 #define QUAD_ELEMENTS 8
 #define MAX_ALL_POINTS 16
 #define THREAD_COUNT_X 16
 #define THREAD_COUNT_Y 16
-#include <torch/extension.h>
+#include <torch/csrc/stable/ops.h>
+#include <torch/csrc/stable/tensor.h>
+#include <torch/headeronly/core/Dispatch.h>
+#include <torch/headeronly/core/ScalarType.h>
+#include <torch/headeronly/macros/Macros.h>
 #include <cmath>
 #include "polygonArea.h"
 #include "insidePoints.h"
@@ -27,6 +32,13 @@
 #include "allPoints.h"
 #include "simpleIntersectCheck.h"
 #include "checks.h"
+
+#define AT_DISPATCH_CASE_FLOATING_TYPES(...)            \
+    THO_DISPATCH_CASE(torch::headeronly::ScalarType::Double, __VA_ARGS__) \
+    THO_DISPATCH_CASE(torch::headeronly::ScalarType::Float, __VA_ARGS__)
+
+#define AT_DISPATCH_FLOATING_TYPES(TYPE, NAME, ...) \
+    THO_DISPATCH_SWITCH(TYPE, NAME, AT_DISPATCH_CASE_FLOATING_TYPES(__VA_ARGS__))
 
 
 template <typename scalar_t>
@@ -112,23 +124,44 @@ void polygonAreaCalculation(
     }
 }
 
-torch::Tensor calculateIoUCPUTorch(torch::Tensor quad_0, torch::Tensor quad_1, bool sort_input_quads) {
+extern "C" {
+  /* Creates a dummy empty _C module that can be imported from Python.
+     The import from Python will load the .so consisting of this file
+     in this extension, so that the STABLE_TORCH_LIBRARY static initializers
+     below are run. */
+  PyObject* PyInit__C(void)
+  {
+      static struct PyModuleDef module_def = {
+          PyModuleDef_HEAD_INIT,
+          "_C",   /* name of module */
+          NULL,   /* module documentation, may be NULL */
+          -1,     /* size of per-interpreter state of the module,
+                     or -1 if the module keeps state in global variables. */
+          NULL,   /* methods */
+      };
+      return PyModule_Create(&module_def);
+  }
+}
+
+namespace quad_iou {
+
+torch::stable::Tensor calculate_iou_cpu(torch::stable::Tensor quad_0, torch::stable::Tensor quad_1, bool sort_input_quads) {
     checks::check_tensor_validity(quad_0, quad_1);
     // Create an output tensor
-    torch::Tensor iou_matrix = torch::empty({quad_0.size(0), quad_1.size(0)}, quad_0.options());
+    torch::stable::Tensor iou_matrix = torch::stable::empty({quad_0.size(0), quad_1.size(0)}, quad_0.scalar_type(), quad_0.layout(), quad_0.device());
 
-    AT_DISPATCH_FLOATING_TYPES(quad_0.scalar_type(), "calculateIoUCPUTorch", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(quad_0.scalar_type(), "calculate_iou_cpu", ([&] {
         // Allocate device memory for polygon areas
         scalar_t* polygonAreas = (scalar_t*)malloc((quad_0.size(0) + quad_1.size(0)) * sizeof(scalar_t));
         // If sorting of input quads is needed
         if (sort_input_quads) {
-            torch::Tensor quad_0_copy = quad_0.clone();
-            torch::Tensor quad_1_copy = quad_1.clone();
+            torch::stable::Tensor quad_0_copy = torch::stable::clone(quad_0);
+            torch::stable::Tensor quad_1_copy = torch::stable::clone(quad_1);
             // Calculate polygon areas for sorted quads
             polygonAreaCalculation<scalar_t>(
                 polygonAreas,
-                quad_0_copy.data_ptr<scalar_t>(),
-                quad_1_copy.data_ptr<scalar_t>(),
+                quad_0_copy.mutable_data_ptr<scalar_t>(),
+                quad_1_copy.mutable_data_ptr<scalar_t>(),
                 quad_0.size(0),
                 quad_1.size(0),
                 sort_input_quads
@@ -136,9 +169,9 @@ torch::Tensor calculateIoUCPUTorch(torch::Tensor quad_0, torch::Tensor quad_1, b
 
             // Calculate IoU for sorted quads
             calculateIoU<scalar_t>(
-                quad_0_copy.data_ptr<scalar_t>(),
-                quad_1_copy.data_ptr<scalar_t>(),
-                iou_matrix.data_ptr<scalar_t>(),
+                quad_0_copy.mutable_data_ptr<scalar_t>(),
+                quad_1_copy.mutable_data_ptr<scalar_t>(),
+                iou_matrix.mutable_data_ptr<scalar_t>(),
                 polygonAreas,
                 quad_0.size(0),
                 quad_1.size(0)
@@ -147,17 +180,17 @@ torch::Tensor calculateIoUCPUTorch(torch::Tensor quad_0, torch::Tensor quad_1, b
             // Calculate polygon areas for unsorted quads
             polygonAreaCalculation<scalar_t>(
                 polygonAreas,
-                quad_0.data_ptr<scalar_t>(),
-                quad_1.data_ptr<scalar_t>(),
+                quad_0.mutable_data_ptr<scalar_t>(),
+                quad_1.mutable_data_ptr<scalar_t>(),
                 quad_0.size(0),
                 quad_1.size(0),
                 sort_input_quads
             );
             // Calculate IoU for unsorted quads
             calculateIoU<scalar_t>(
-                quad_0.data_ptr<scalar_t>(),
-                quad_1.data_ptr<scalar_t>(),
-                iou_matrix.data_ptr<scalar_t>(),
+                quad_0.mutable_data_ptr<scalar_t>(),
+                quad_1.mutable_data_ptr<scalar_t>(),
+                iou_matrix.mutable_data_ptr<scalar_t>(),
                 polygonAreas,
                 quad_0.size(0),
                 quad_1.size(0)
@@ -165,4 +198,16 @@ torch::Tensor calculateIoUCPUTorch(torch::Tensor quad_0, torch::Tensor quad_1, b
         }
     }));
     return iou_matrix;
+}
+
+
+STABLE_TORCH_LIBRARY(quad_iou, m) {
+  m.def("calculate_iou(Tensor quad_0, Tensor quad_1, bool sort_input_quads) -> Tensor");
+}
+
+// Registers CPU implementations for mymuladd, mymul, myadd_out
+STABLE_TORCH_LIBRARY_IMPL(quad_iou, CPU, m) {
+  m.impl("calculate_iou", TORCH_BOX(&calculate_iou_cpu));
+}
+
 }
