@@ -160,7 +160,7 @@ torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::st
     // Create an output tensor
     torch::stable::Tensor iou_matrix = torch::stable::empty({quad_0.size(0), quad_1.size(0)}, quad_0.scalar_type(), quad_0.layout(), quad_0.device());
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(quad_0.scalar_type(), "calculateIoUCudaTorch", ([&] {        
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(quad_0.scalar_type(), "calculate_iou_cuda", ([&] {        
         // Allocate device memory for polygon areas
         scalar_t* polygonAreas_d;
         cudaMalloc((void**)&polygonAreas_d, (quad_0.size(0) + quad_1.size(0)) * sizeof(scalar_t));
