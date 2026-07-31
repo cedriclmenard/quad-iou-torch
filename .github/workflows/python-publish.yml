@@ -31,7 +31,8 @@ jobs:
         run: |
           # NOTE: put your own distribution build steps here.
           python -m pip install build
-          python -m build
+          # build a source distribution only as this requires linking to torch libraries
+          python -m build --sdist
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
