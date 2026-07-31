@@ -87,7 +87,7 @@ def get_extensions():
 
 setup(
     name="quad-iou-fixed",
-    version="0.2.1",
+    version="0.2.2",
     author="Irakli Salia, Cédric Leblond-Ménard",
     packages=find_packages(),
     ext_modules=get_extensions(),
