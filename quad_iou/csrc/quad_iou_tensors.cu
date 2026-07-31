@@ -85,7 +85,7 @@ __device__ inline scalar_t calculateIoU(
     int quad_0_size,
     scalar_t *polygonAreas) {
 
-    const scalar_t epsilon = 0.00001;
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
 
     scalar_t intersect_area = intersectionArea(quad_0, quad_1);
     return intersect_area / (unionArea(quad_0_idx, quad_1_idx, quad_0_size, polygonAreas, intersect_area) + epsilon);

@@ -85,7 +85,7 @@ inline void calculateIoU(
     int quad_0_size,
     int quad_1_size
     ) {
-    const scalar_t epsilon = 0.00001;
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
 
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < quad_0_size; i++){
