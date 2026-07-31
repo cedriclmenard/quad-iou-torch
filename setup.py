@@ -62,7 +62,7 @@ def get_extensions():
         extra_link_args.extend(["-O0", "-g"])
 
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    extensions_dir = os.path.join(this_dir, "src", "csrc")
+    extensions_dir = os.path.join(this_dir, library_name, "csrc")
     sources = list(glob.glob(os.path.join(extensions_dir, "*.cpp")))
 
     # extensions_cuda_dir = os.path.join(extensions_dir, "cuda")
@@ -89,12 +89,12 @@ setup(
     name=library_name,
     version="0.2.1",
     author="Irakli Salia, Cédric Leblond-Ménard",
-    packages=find_packages("src"),
+    packages=find_packages(),
     ext_modules=get_extensions(),
     install_requires=["torch>=2.10.0"],
     description="Torch extension for calculating IoU (Intersection over Union) for quadrilaterals in a combinational manner (MxN)",
     long_description=open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "README.md")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
     ).read(),
     long_description_content_type="text/markdown",
     url="https://github.com/cedriclmenard/quad-iou-torch",
