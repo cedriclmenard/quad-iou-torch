@@ -1,4 +1,2 @@
-import torch
-from .wrap import calculate_iou
-
-__all__ = ['calculate_iou']
+from . import _C  # noqa: F401
+from .ops import calculate_iou  # noqa: F401

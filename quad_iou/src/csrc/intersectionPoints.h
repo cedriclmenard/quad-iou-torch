@@ -1,7 +1,7 @@
 #define MAX_INTERSECTION_POINTS 8
 #define MAX_ALL_POINTS 16
 #define EPSILON 1e-6
-#include <torch/extension.h>
+#include <torch/csrc/stable/library.h>
 #include "utils.h"
 #ifdef __CUDACC__
 #include <cuda_runtime.h>

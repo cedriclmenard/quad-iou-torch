@@ -1,7 +1,7 @@
 #define MAX_INTERSECTION_POINTS 8
 #define MAX_INSIDE_POINTS 8
 #define MAX_ALL_POINTS 16
-#include <torch/extension.h>
+#include <torch/csrc/stable/library.h>
 #ifdef __CUDACC__
 #include <cuda_runtime.h>
 #define HOST_DEVICE __host__ __device__
