@@ -85,7 +85,12 @@ __device__ inline scalar_t calculateIoU(
     int quad_0_size,
     scalar_t *polygonAreas) {
 
-    const scalar_t epsilon = 0.00001;
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
+
+    if (simpleIntersectCheck::checkSameQuad(quad_0, quad_1)) {
+        // if both quads are the same, then IoU is 1.0
+        return 1.0;
+    }
 
     scalar_t intersect_area = intersectionArea(quad_0, quad_1);
     return intersect_area / (unionArea(quad_0_idx, quad_1_idx, quad_0_size, polygonAreas, intersect_area) + epsilon);
@@ -157,10 +162,13 @@ namespace quad_iou {
 
 torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::stable::Tensor quad_1, bool sort_input_quads) {
     checks::check_tensor_validity(quad_0, quad_1);
+    STD_TORCH_CHECK(quad_0.device().type() == torch::headeronly::DeviceType::CUDA, "quad_0 must be a CUDA tensor");
+    STD_TORCH_CHECK(quad_1.device().type() == torch::headeronly::DeviceType::CUDA, "quad_1 must be a CUDA tensor");
+
     // Create an output tensor
     torch::stable::Tensor iou_matrix = torch::stable::empty({quad_0.size(0), quad_1.size(0)}, quad_0.scalar_type(), quad_0.layout(), quad_0.device());
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(quad_0.scalar_type(), "calculateIoUCudaTorch", ([&] {        
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(quad_0.scalar_type(), "calculate_iou_cuda", ([&] {        
         // Allocate device memory for polygon areas
         scalar_t* polygonAreas_d;
         cudaMalloc((void**)&polygonAreas_d, (quad_0.size(0) + quad_1.size(0)) * sizeof(scalar_t));
@@ -174,13 +182,13 @@ torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::st
 
         // If sorting of input quads is needed
         if (sort_input_quads) {
-            torch::stable::Tensor quad_0_copy = quad_0.clone();
-            torch::stable::Tensor quad_1_copy = quad_1.clone();
+            torch::stable::Tensor quad_0_copy = torch::stable::clone(quad_0);
+            torch::stable::Tensor quad_1_copy = torch::stable::clone(quad_1);
             // Calculate polygon areas for sorted quads
             polygonAreaCalculationKernel<scalar_t><<<gridSizeQuad, blockSizeQuad>>>(
                 polygonAreas_d,
-                quad_0_copy.data_ptr<scalar_t>(),
-                quad_1_copy.data_ptr<scalar_t>(),
+                quad_0_copy.mutable_data_ptr<scalar_t>(),
+                quad_1_copy.mutable_data_ptr<scalar_t>(),
                 quad_0.size(0),
                 quad_1.size(0),
                 sort_input_quads
@@ -189,9 +197,9 @@ torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::st
 
             // Calculate IoU for sorted quads
             calculateIoUKernel<scalar_t><<<gridSize, blockSize>>>(
-                quad_0_copy.data_ptr<scalar_t>(),
-                quad_1_copy.data_ptr<scalar_t>(),
-                iou_matrix.data_ptr<scalar_t>(),
+                quad_0_copy.mutable_data_ptr<scalar_t>(),
+                quad_1_copy.mutable_data_ptr<scalar_t>(),
+                iou_matrix.mutable_data_ptr<scalar_t>(),
                 polygonAreas_d,
                 quad_0.size(0),
                 quad_1.size(0)
@@ -200,8 +208,8 @@ torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::st
             // Calculate polygon areas for unsorted quads
             polygonAreaCalculationKernel<scalar_t><<<gridSizeQuad, blockSizeQuad>>>(
                 polygonAreas_d,
-                quad_0.data_ptr<scalar_t>(),
-                quad_1.data_ptr<scalar_t>(),
+                quad_0.mutable_data_ptr<scalar_t>(),
+                quad_1.mutable_data_ptr<scalar_t>(),
                 quad_0.size(0),
                 quad_1.size(0),
                 sort_input_quads
@@ -210,9 +218,9 @@ torch::stable::Tensor calculate_iou_cuda(torch::stable::Tensor quad_0, torch::st
 
             // Calculate IoU for unsorted quads
             calculateIoUKernel<scalar_t><<<gridSize, blockSize>>>(
-                quad_0.data_ptr<scalar_t>(),
-                quad_1.data_ptr<scalar_t>(),
-                iou_matrix.data_ptr<scalar_t>(),
+                quad_0.mutable_data_ptr<scalar_t>(),
+                quad_1.mutable_data_ptr<scalar_t>(),
+                iou_matrix.mutable_data_ptr<scalar_t>(),
                 polygonAreas_d,
                 quad_0.size(0),
                 quad_1.size(0)

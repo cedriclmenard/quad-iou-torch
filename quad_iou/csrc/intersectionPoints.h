@@ -1,6 +1,5 @@
 #define MAX_INTERSECTION_POINTS 8
 #define MAX_ALL_POINTS 16
-#define EPSILON 1e-6
 #include <torch/csrc/stable/library.h>
 #include "utils.h"
 #ifdef __CUDACC__
@@ -14,18 +13,23 @@
 
 template <typename scalar_t>
 HOST_DEVICE inline bool arePointsEqual(const Point<scalar_t>& p1, const Point<scalar_t>& p2) {
-    return fabsf(p1.x - p2.x) < EPSILON && fabsf(p1.y - p2.y) < EPSILON;
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
+    return fabsf(p1.x - p2.x) < epsilon && fabsf(p1.y - p2.y) < epsilon;
 }
 
 template <typename scalar_t>
 HOST_DEVICE inline int orientation(const Point<scalar_t>& p, const Point<scalar_t>& q, const Point<scalar_t>& r) {
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
+
     scalar_t val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-    if (fabsf(val) < EPSILON) return 0;  // colinear
+    if (fabsf(val) < epsilon) return 0;  // colinear
     return (val > 0) ? 1 : 2;  // clockwise
 }
 
 template <typename scalar_t>
 HOST_DEVICE inline bool doIntersect(const Point<scalar_t>& p1, const Point<scalar_t>& q1, const Point<scalar_t>& p2, const Point<scalar_t>& q2, Point<scalar_t>& intersection) {
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
+    
     // Find the four orientations needed for general and
     // special cases
     int o1 = orientation(p1, q1, p2);
@@ -46,7 +50,7 @@ HOST_DEVICE inline bool doIntersect(const Point<scalar_t>& p1, const Point<scala
         scalar_t c2 = a2 * (p2.x) + b2 * (p2.y);
 
         scalar_t determinant = a1 * b2 - a2 * b1;
-        if (fabsf(determinant) < EPSILON) {
+        if (fabsf(determinant) < epsilon) {
             return false; // The lines are parallel
         } else {
             intersection.x = (b2 * c1 - b1 * c2) / determinant;

@@ -85,13 +85,18 @@ inline void calculateIoU(
     int quad_0_size,
     int quad_1_size
     ) {
-    const scalar_t epsilon = 0.00001;
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
 
     #pragma omp parallel for collapse(2)
     for (int i = 0; i < quad_0_size; i++){
         for (int j = 0; j < quad_1_size; j++){
             scalar_t *box_0 = &quad_0[i * 8];
             scalar_t *box_1 = &quad_1[j * 8];
+
+            if (simpleIntersectCheck::checkSameQuad(box_0, box_1)) {
+                iou_matrix[i * quad_1_size + j] = 1.0;
+                continue;
+            }
             scalar_t intersect_area = intersectionArea(box_0, box_1);
             scalar_t union_area = unionArea(i, j, quad_0_size, polygonAreas, intersect_area) + epsilon;
             iou_matrix[i * quad_1_size + j] = intersect_area / union_area;

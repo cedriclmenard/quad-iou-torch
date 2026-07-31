@@ -1,5 +1,4 @@
 #define MAX_ALL_POINTS 16
-#define EPSILON 1e-6
 #include <torch/csrc/stable/library.h>
 #include "utils.h"
 # include <cmath>
@@ -70,10 +69,12 @@ HOST_DEVICE inline void swapPoints(scalar_t points[MAX_ALL_POINTS][2], int i){
 
 template <typename scalar_t>
 HOST_DEVICE inline bool comparePoints(const Point<scalar_t>& p1, const Point<scalar_t>& p2, const Point<scalar_t>& centroid) {
+    const scalar_t epsilon = std::numeric_limits<scalar_t>::epsilon();
+
     scalar_t angle1 = computeAngle(centroid, p1);
     scalar_t angle2 = computeAngle(centroid, p2);
 
-    if (fabs(angle1 - angle2) < EPSILON) {
+    if (fabs(angle1 - angle2) < epsilon) {
         scalar_t dist1 = (p1.x - centroid.x) * (p1.x - centroid.x) +
                          (p1.y - centroid.y) * (p1.y - centroid.y);
         scalar_t dist2 = (p2.x - centroid.x) * (p2.x - centroid.x) +
